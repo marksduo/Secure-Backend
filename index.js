@@ -6,6 +6,9 @@
 // EBAY_CLIENT_SECRET
 // EPN_CAMPAIGN_ID
 // PORT (optional, default 3000)
+app.get("/", (req, res) => {
+    res.send("MPAutoHunter backend running.");
+});
 
 const express = require('express')
 const axios = require('axios')
