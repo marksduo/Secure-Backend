@@ -1,10 +1,18 @@
 {
   "name": "mpautohunter-backend",
   "version": "1.0.0",
+  "description": "Secure eBay EPN backend for MPAutoHunter",
   "main": "index.js",
-  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
-    "express": "^4.18.2",
-    "body-parser": "^1.20.2"
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.0.0",
+    "qs": "^6.12.0"
   }
 }
