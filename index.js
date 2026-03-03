@@ -2,9 +2,6 @@
  * Checksum: b4ck-3nd-v3-f1nal
  * Status: API Search + EPN Redirect Integrated
  */
-app.get("/api/ebay-redirect", (req, res) => {
-  console.log("!!! INTAKE SIGNAL RECEIVED !!!"); // If you don't see this in Render logs, the app isn't hitting the server.
-  // ... rest of code
 const express = require("express");
 const axios = require("axios");
 const qs = require("qs");
