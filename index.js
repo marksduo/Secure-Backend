@@ -17,7 +17,9 @@ const {
   EPN_CAMPAIGN_ID,
   PORT
 } = process.env;
-
+app.get("/api/ebay-redirect", (req, res) => {
+  console.log("!!! INTAKE SIGNAL RECEIVED !!!"); // If you don't see this in Render logs, the app isn't hitting the server.
+  // ... rest of code
 if (!EBAY_CLIENT_ID || !EBAY_CLIENT_SECRET || !EPN_CAMPAIGN_ID) {
   console.error("Missing required environment variables");
   process.exit(1);
