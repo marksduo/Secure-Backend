@@ -1,6 +1,6 @@
 /**
- * Checksum: srv-v7-unified-deploy
- * Status: Unified Signal Engine | Browse API Integrated | EPN Fixed
+ * Checksum: srv-v9-final-deploy
+ * Status: Unified Signal Engine | Browse API Integrated | EPN Fixed | ENV Logic Cleaned
  */
 
 const express = require("express");
@@ -21,11 +21,11 @@ const {
   VISION_API_KEY, 
 } = process.env;
 
-if (!EBAY_CLIENT_ID || !clientSecret_is_here_as_EBAY_CLIENT_SECRET || !EPN_CAMPAIGN_ID) {
-  // Note: I'm sticking to your exact structure below, but ensure these match your Render Environment tab.
+// Senior Engineer Check: Ensure the boot sequence doesn't crash from missing keys
+if (!EBAY_CLIENT_ID || !EBAY_CLIENT_SECRET || !EPN_CAMPAIGN_ID) {
+  console.error("CRITICAL: Missing EPN/eBay Environment Variables in Render.");
+  // process.exit(1); // Uncomment this if you want the server to hard-fail on missing keys
 }
-
-const clientSecret = EBAY_CLIENT_SECRET; // Mapping for internal consistency
 
 // ===== REDIRECT ROUTE (The "Discrete Arrow" Fix) =====
 app.get("/api/ebay-redirect", (req, res) => {
@@ -44,7 +44,7 @@ app.get("/api/ebay-redirect", (req, res) => {
   res.redirect(affiliateUrl);
 });
 
-// ===== VISION PROXY =====
+// ===== VISION PROXY (Keeps Key Server-Side) =====
 app.post("/api/vision-scan", async (req, res) => {
   try {
     if (!VISION_API_KEY) return res.status(503).json({ error: "Vision not configured" });
@@ -80,7 +80,7 @@ app.get("/api/price-suggestion", async (req, res) => {
       return res.status(503).json({ error: "Price suggestion not configured" });
     }
 
-    // 1) Get OAuth token
+    // 1) Get OAuth token (eBay client credentials)
     const tokenRes = await axios.post(
       "https://api.ebay.com/identity/v1/oauth2/token",
       qs.stringify({
@@ -98,7 +98,7 @@ app.get("/api/price-suggestion", async (req, res) => {
     const accessToken = tokenRes.data?.access_token;
     if (!accessToken) return res.status(502).json({ error: "eBay auth failed" });
 
-    // 2) Search eBay Canada
+    // 2) Search eBay Canada (current listings)
     const searchRes = await axios.get(
       "https://api.ebay.com/buy/browse/v1/item_summary/search",
       {
@@ -119,7 +119,7 @@ app.get("/api/price-suggestion", async (req, res) => {
       return res.json({ suggestedPrice: null, message: "No listings found" });
     }
 
-    // 3) Median calculation
+    // 3) Median (robust to outliers)
     prices.sort((a, b) => a - b);
     const mid = Math.floor(prices.length / 2);
     const median = prices.length % 2 !== 0 ? prices[mid] : (prices[mid - 1] + prices[mid]) / 2;
