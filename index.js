@@ -49,26 +49,29 @@ async function getAppToken() {
   return tokenCache.token;
 }
 
-// ROUTE 1: The "Discrete Arrow" Redirect (Monetized Search)
+/**
+ * Checksum: b4ck-3nd-v5-direct-2026
+ * Status: Rover Bypass | Direct Affiliate Injection
+ */
+
 app.get("/api/ebay-redirect", (req, res) => {
   const { q } = req.query;
   if (!q) return res.status(400).send("Missing query");
 
-  // Step 1: Build the RAW destination URL (No encoding here yet)
-  // We want the literal string that a browser would use.
-  const rawSearch = `https://www.ebay.ca/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`;
-  
-  // Step 2: Wrap it in the EPN Rover Link
-  // We encode the ENTIRE destination (mpre) precisely ONCE.
-  const affiliateUrl = `https://rover.ebay.com/rover/1/706-53473-19255-0/1?ff3=4&pub=5575561320&toolid=10001&campid=${EPN_CAMPAIGN_ID}&customid=cold-graphite-app&mpre=${encodeURIComponent(rawSearch)}`;
+  // Step 1: Define your EPN Parameters
+  const campid = process.env.EPN_CAMPAIGN_ID;
+  const toolid = "10001";
+  const mkevt = "1";
+  const mkcid = "1"; // General eBay Partner Network CID
+  const mkrid = "706-53473-19255-0"; // eBay Canada specific RID
 
-  console.log(`[AFFILIATE SIGNAL] Routing: ${q}`);
+  // Step 2: Build the Direct Search URL with parameters appended
+  // This bypasses the 1x1 pixel "Rover" ghost.
+  const query = encodeURIComponent(q);
+  const affiliateUrl = `https://www.ebay.ca/sch/i.html?_nkw=${query}&LH_Sold=1&LH_Complete=1&mkcid=${mkcid}&mkrid=${mkrid}&campid=${campid}&toolid=${toolid}&mkevt=${mkevt}`;
+
+  console.log(`[DIRECT AFFILIATE] Routing Signal: ${q}`);
   
   // Step 3: The Jump
   res.redirect(affiliateUrl);
 });
-
-app.get("/", (req, res) => res.send("System Live. Signal-to-Noise Optimized."));
-
-const listenPort = PORT || 3000;
-app.listen(listenPort, () => console.log(`Backend Engine Active on Port ${listenPort}`));
