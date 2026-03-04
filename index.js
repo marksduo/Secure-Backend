@@ -1,6 +1,6 @@
 /**
- * Checksum: srv-v9-final-deploy
- * Status: Unified Signal Engine | Browse API Integrated | EPN Fixed | ENV Logic Cleaned
+ * Checksum: srv-v10-intake-optimized
+ * Status: Unified Signal Engine | Payload Limit Increased (10MB) | EPN Fixed
  */
 
 const express = require("express");
@@ -9,7 +9,11 @@ const qs = require("qs");
 const cors = require("cors"); 
 
 const app = express();
-app.use(express.json());
+
+// OGR Fix: Expand intake port to handle large Base64 image strings from modern cameras
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
 app.use(cors());
 
 // ===== ENV CHECK =====
@@ -21,10 +25,8 @@ const {
   VISION_API_KEY, 
 } = process.env;
 
-// Senior Engineer Check: Ensure the boot sequence doesn't crash from missing keys
 if (!EBAY_CLIENT_ID || !EBAY_CLIENT_SECRET || !EPN_CAMPAIGN_ID) {
   console.error("CRITICAL: Missing EPN/eBay Environment Variables in Render.");
-  // process.exit(1); // Uncomment this if you want the server to hard-fail on missing keys
 }
 
 // ===== REDIRECT ROUTE (The "Discrete Arrow" Fix) =====
@@ -80,7 +82,6 @@ app.get("/api/price-suggestion", async (req, res) => {
       return res.status(503).json({ error: "Price suggestion not configured" });
     }
 
-    // 1) Get OAuth token (eBay client credentials)
     const tokenRes = await axios.post(
       "https://api.ebay.com/identity/v1/oauth2/token",
       qs.stringify({
@@ -98,7 +99,6 @@ app.get("/api/price-suggestion", async (req, res) => {
     const accessToken = tokenRes.data?.access_token;
     if (!accessToken) return res.status(502).json({ error: "eBay auth failed" });
 
-    // 2) Search eBay Canada (current listings)
     const searchRes = await axios.get(
       "https://api.ebay.com/buy/browse/v1/item_summary/search",
       {
@@ -119,7 +119,6 @@ app.get("/api/price-suggestion", async (req, res) => {
       return res.json({ suggestedPrice: null, message: "No listings found" });
     }
 
-    // 3) Median (robust to outliers)
     prices.sort((a, b) => a - b);
     const mid = Math.floor(prices.length / 2);
     const median = prices.length % 2 !== 0 ? prices[mid] : (prices[mid - 1] + prices[mid]) / 2;
