@@ -54,13 +54,17 @@ app.get("/api/ebay-redirect", (req, res) => {
   const { q } = req.query;
   if (!q) return res.status(400).send("Missing query");
 
-  // Construct search for eBay CA + Sold/Completed Filters
-  const baseSearch = `https://www.ebay.ca/sch/i.html?_nkw=${encodeURIComponent(q)}&LH_Sold=1&LH_Complete=1`;
+  // Step 1: Build the RAW destination URL (No encoding here yet)
+  // We want the literal string that a browser would use.
+  const rawSearch = `https://www.ebay.ca/sch/i.html?_nkw=${q}&LH_Sold=1&LH_Complete=1`;
   
-  // Wrap in EPN Rover Link
-  const affiliateUrl = `https://rover.ebay.com/rover/1/706-53473-19255-0/1?ff3=4&pub=5575561320&toolid=10001&campid=${EPN_CAMPAIGN_ID}&customid=cold-graphite-app&mpre=${encodeURIComponent(baseSearch)}`;
+  // Step 2: Wrap it in the EPN Rover Link
+  // We encode the ENTIRE destination (mpre) precisely ONCE.
+  const affiliateUrl = `https://rover.ebay.com/rover/1/706-53473-19255-0/1?ff3=4&pub=5575561320&toolid=10001&campid=${EPN_CAMPAIGN_ID}&customid=cold-graphite-app&mpre=${encodeURIComponent(rawSearch)}`;
 
-  console.log(`[AFFILIATE SIGNAL] Redirecting: ${q}`);
+  console.log(`[AFFILIATE SIGNAL] Routing: ${q}`);
+  
+  // Step 3: The Jump
   res.redirect(affiliateUrl);
 });
 
