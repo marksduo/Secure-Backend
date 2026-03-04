@@ -96,6 +96,86 @@ app.post("/api/vision-scan", async (req, res) => {
     return res.status(500).json({ error: "Vision failed" });
   }
 });
+app.get("/api/price-suggestion", async (req, res) => {
+  try {
+    const q = req.query.q;
+    if (!q || typeof q !== "string") {
+      return res.status(400).json({ error: "Missing query (q)" });
+    }
+
+    const clientId = process.env.EBAY_CLIENT_ID;
+    const clientSecret = process.env.EBAY_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return res.status(503).json({ error: "Price suggestion not configured" });
+    }
+
+    // 1) Get OAuth token (eBay client credentials)
+    const tokenRes = await axios.post(
+      "https://api.ebay.com/identity/v1/oauth2/token",
+      qs.stringify({
+        grant_type: "client_credentials",
+        scope: "https://api.ebay.com/oauth/api_scope",
+      }),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization:
+            "Basic " +
+            Buffer.from(`${clientId}:${clientSecret}`).toString("base64"),
+        },
+      }
+    );
+
+    const accessToken = tokenRes.data?.access_token;
+    if (!accessToken) {
+      console.error("eBay token missing", tokenRes.data);
+      return res.status(502).json({ error: "eBay auth failed" });
+    }
+
+    // 2) Search eBay Canada (current listings)
+    const searchRes = await axios.get(
+      "https://api.ebay.com/buy/browse/v1/item_summary/search",
+      {
+        params: { q: q.trim(), limit: 20 },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "X-EBAY-C-MARKETPLACE-ID": "EBAY_CA",
+        },
+      }
+    );
+
+    const summaries = searchRes.data?.itemSummaries || [];
+    const prices = summaries
+      .map((item) => parseFloat(item?.price?.value))
+      .filter((n) => !isNaN(n) && n > 0);
+
+    if (prices.length === 0) {
+      return res.json({ suggestedPrice: null, message: "No listings found" });
+    }
+
+    // 3) Median (robust to outliers)
+    prices.sort((a, b) => a - b);
+    const mid = Math.floor(prices.length / 2);
+    const median =
+      prices.length % 2 !== 0
+        ? prices[mid]
+        : (prices[mid - 1] + prices[mid]) / 2;
+
+    return res.json({
+      suggestedPrice: median.toFixed(2),
+      currency: "CAD",
+      sampleSize: prices.length,
+    });
+  } catch (err) {
+    console.error(
+      "Price suggestion failure",
+      err?.response?.data || err?.message
+    );
+    return res
+      .status(500)
+      .json({ error: "Price suggestion failed", suggestedPrice: null });
+  }
+});
 
 // ===== SYSTEM HEALTH =====
 app.get("/", (req, res) => {
